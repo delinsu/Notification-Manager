@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>订阅管理</title>
+    <!-- 引入 Vue 3, Tailwind, DaisyUI -->
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@4.4.19/dist/full.min.css" rel="stylesheet" type="text/css" />
+    <!-- 引入 Day.js 处理日期 -->
+    <script src="https://cdn.jsdelivr.net/npm/dayjs@1/dayjs.min.js"></script>
+</head>
+<body class="bg-base-200 min-h-screen p-4">
+
+<div id="app" class="max-w-3xl mx-auto">
+    <!-- 顶部导航 -->
+    <div class="navbar bg-base-100 rounded-box shadow-lg mb-6">
+        <div class="flex-1">
+            <a class="btn btn-ghost text-xl">📅 订阅管家</a>
+        </div>
+        <div class="flex-none gap-2">
+            <button @click="openSettings" class="btn btn-square btn-ghost">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="inline-block w-5 h-5 stroke-current"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+            </button>
+            <button @click="fetchData" class="btn btn-primary btn-sm">刷新/同步</button>
+        </div>
+    </div>
+	
+	<!-- 统计看板 -->
+    <div class="stats shadow w-full mb-6 bg-base-100">
+        <div class="stat">
+            <div class="stat-figure text-primary">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="inline-block w-8 h-8 stroke-current"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+            </div>
+            <div class="stat-title">活跃订阅数</div>
+            <div class="stat-value">{{ subs.filter(s => s.status === 'active').length }}</div>
+            <div class="stat-desc">个正在扣费的项目</div>
+        </div>
+        
+        <div class="stat">
+            <div class="stat-figure text-secondary">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="inline-block w-8 h-8 stroke-current"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"></path></svg>
+            </div>
+            <div class="stat-title">预估月支出</div>
+            <div class="stat-value text-secondary">¥{{ totalMonthly }}</div>
+            <div class="stat-desc">基于当前周期折算</div>
+        </div>
+    </div>
+
+    <!-- 列表区域 -->
+    <div v-if="loading" class="text-center py-10"><span class="loading loading-spinner loading-lg"></span></div>
+    
+    <div v-else class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div v-for="sub in sortedSubs" :key="sub.id" class="card bg-base-100 shadow-xl border-l-4" :class="statusColor(sub.status)">
+            <div class="card-body p-5">
+                <div class="flex justify-between items-start">
+                    <h2 class="card-title">{{ sub.name }}</h2>
+                    <div class="badge badge-outline">{{ statusText(sub.status) }}</div>
+                </div>
+                <p class="text-2xl font-bold">¥{{ sub.price }} <span class="text-sm font-normal text-gray-500">/ {{ cycleText(sub.cycle) }}</span></p>
+                <div class="mt-2 text-sm text-gray-600">
+                    <p>起订日: {{ sub.start_date }}</p>
+                    <p class="font-semibold" :class="{'text-red-500': isUrgent(sub)}">
+                        下次扣费: {{ calculateNextDate(sub) }}
+                        <span v-if="sub.status === 'active'" class="text-xs font-normal">({{ daysUntil(sub) }}天后)</span>
+                    </p>
+                </div>
+                <div class="card-actions justify-end mt-4">
+                    <button @click="editSub(sub)" class="btn btn-sm btn-ghost">编辑</button>
+                    <button @click="deleteSub(sub.id)" class="btn btn-sm btn-error btn-outline">删除</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 底部添加按钮 -->
+    <button @click="openAddModal" class="btn btn-circle btn-primary fixed bottom-8 right-8 shadow-xl text-2xl">+</button>
+
+    <!-- 编辑/添加 模态框 -->
+    <dialog id="sub_modal" class="modal">
+        <div class="modal-box">
+            <h3 class="font-bold text-lg mb-4">{{ isEditing ? '编辑订阅' : '新建订阅' }}</h3>
+            <div class="flex flex-col gap-3">
+                <input v-model="form.name" type="text" placeholder="订阅名称 (如 Netflix)" class="input input-bordered w-full" />
+                <div class="flex gap-2">
+                    <input v-model.number="form.price" type="number" placeholder="金额" class="input input-bordered w-full" />
+                    <select v-model="form.cycle" class="select select-bordered">
+                        <option value="month">每月</option>
+                        <option value="year">每年</option>
+                        <option value="week">每周</option>
+                    </select>
+                </div>
+                <label class="form-control w-full">
+                    <div class="label"><span class="label-text">首次扣费日期</span></div>
+                    <input v-model="form.start_date" type="date" class="input input-bordered w-full" />
+                </label>
+                <select v-model="form.status" class="select select-bordered w-full">
+                    <option value="active">激活 (Active)</option>
+                    <option value="paused">暂停 (Paused)</option>
+                    <option value="cancelled">已取消 (Cancelled)</option>
+                </select>
+            </div>
+            <div class="modal-action">
+                <form method="dialog">
+                    <button class="btn">取消</button>
+                </form>
+                <button @click="saveSub" class="btn btn-primary">保存</button>
+            </div>
+        </div>
+    </dialog>
+
+    <!-- 设置模态框 -->
+    <dialog id="settings_modal" class="modal">
+        <div class="modal-box">
+            <h3 class="font-bold text-lg">GitHub 配置</h3>
+            <p class="py-4 text-sm text-gray-500">为了同步数据，请输入你的 GitHub Personal Access Token 和仓库信息。这些信息仅保存在本地。</p>
+            <div class="flex flex-col gap-3">
+                <input v-model="config.token" type="password" placeholder="GitHub Token (ghp_...)" class="input input-bordered" />
+                <input v-model="config.owner" type="text" placeholder="用户名 (User)" class="input input-bordered" />
+                <input v-model="config.repo" type="text" placeholder="仓库名 (Repo)" class="input input-bordered" />
+                <input v-model="config.path" type="text" placeholder="文件路径 (subscriptions.json)" class="input input-bordered" />
+            </div>
+            <div class="modal-action">
+                <form method="dialog"><button class="btn">关闭</button></form>
+                <button @click="saveConfig" class="btn btn-success">保存配置</button>
+            </div>
+        </div>
+    </dialog>
+</div>
+
+<script>
+    const { createApp, ref, computed, onMounted } = Vue;
+
+    createApp({
+        setup() {
+            const subs = ref([]);
+            const loading = ref(false);
+            const sha = ref(''); // 用于 GitHub API 更新文件
+            const isEditing = ref(false);
+            
+            // 配置信息
+            const config = ref({
+                token: localStorage.getItem('gh_token') || '',
+                owner: localStorage.getItem('gh_owner') || '',
+                repo: localStorage.getItem('gh_repo') || '',
+                path: localStorage.getItem('gh_path') || 'subscriptions.json'
+            });
+
+            // 表单数据
+            const form = ref({ id: null, name: '', price: '', cycle: 'month', start_date: '', status: 'active' });
+
+            // 核心算法：计算下一次扣费日期
+            const calculateNextDate = (sub) => {
+                if (sub.status !== 'active') return '---';
+                const today = dayjs().startOf('day');
+                let nextDate = dayjs(sub.start_date);
+                
+                // 循环增加周期直到日期大于等于今天
+                while (nextDate.isBefore(today)) {
+                    if (sub.cycle === 'month') nextDate = nextDate.add(1, 'month');
+                    else if (sub.cycle === 'year') nextDate = nextDate.add(1, 'year');
+                    else if (sub.cycle === 'week') nextDate = nextDate.add(1, 'week');
+                }
+                return nextDate.format('YYYY-MM-DD');
+            };
+
+            const daysUntil = (sub) => {
+                if (sub.status !== 'active') return 0;
+                const nextDate = dayjs(calculateNextDate(sub));
+                return nextDate.diff(dayjs().startOf('day'), 'day');
+            };
+
+            // 排序：优先显示 Active，且日期最近的
+            const sortedSubs = computed(() => {
+                return [...subs.value].sort((a, b) => {
+                    if (a.status !== b.status) return a.status === 'active' ? -1 : 1;
+                    const dateA = calculateNextDate(a);
+                    const dateB = calculateNextDate(b);
+                    if (dateA === '---') return 1;
+                    if (dateB === '---') return -1;
+                    return dayjs(dateA).unix() - dayjs(dateB).unix();
+                });
+            });
+			// 计算每月总支出
+            const totalMonthly = computed(() => {
+                return subs.value.reduce((total, sub) => {
+                    if (sub.status !== 'active') return total; // 只计算激活的
+                    let monthlyPrice = 0;
+                    if (sub.cycle === 'month') monthlyPrice = sub.price;
+                    else if (sub.cycle === 'year') monthlyPrice = sub.price / 12;
+                    else if (sub.cycle === 'week') monthlyPrice = sub.price * 4.3; // 粗略估算
+                    return total + monthlyPrice;
+                }, 0).toFixed(2);
+            });
+
+            // API 操作
+            const fetchData = async () => {
+                if (!config.value.token || !config.value.repo) return alert('请先配置 GitHub 设置');
+                loading.value = true;
+                try {
+                    const url = `https://api.github.com/repos/${config.value.owner}/${config.value.repo}/contents/${config.value.path}`;
+                    const res = await fetch(url, {
+                        headers: { 'Authorization': `token ${config.value.token}`, 'Accept': 'application/vnd.github.v3+json' }
+                    });
+                    if (!res.ok) throw new Error('API Error');
+                    const data = await res.json();
+                    sha.value = data.sha;
+                    // Base64 解码支持中文
+                    const content = new TextDecoder().decode(Uint8Array.from(atob(data.content), c => c.charCodeAt(0)));
+                    subs.value = JSON.parse(content);
+                } catch (e) {
+                    alert('获取数据失败，请检查配置或网络');
+                    console.error(e);
+                } finally {
+                    loading.value = false;
+                }
+            };
+
+            const syncToGithub = async () => {
+                loading.value = true;
+                try {
+                    const contentStr = JSON.stringify(subs.value, null, 2);
+                    // Base64 编码支持中文
+                    const contentBase64 = btoa(String.fromCharCode(...new TextEncoder().encode(contentStr)));
+                    
+                    const url = `https://api.github.com/repos/${config.value.owner}/${config.value.repo}/contents/${config.value.path}`;
+                    const res = await fetch(url, {
+                        method: 'PUT',
+                        headers: { 'Authorization': `token ${config.value.token}`, 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            message: 'Update subscriptions via Web',
+                            content: contentBase64,
+                            sha: sha.value
+                        })
+                    });
+                    const data = await res.json();
+                    sha.value = data.content.sha; // 更新 sha 以便下次提交
+                    alert('同步成功！');
+                } catch (e) {
+                    alert('同步失败');
+                } finally {
+                    loading.value = false;
+                }
+            };
+
+            // UI 辅助函数
+            const statusColor = (s) => s === 'active' ? 'border-green-500' : s === 'paused' ? 'border-yellow-500' : 'border-red-500 opacity-60';
+            const statusText = (s) => ({ active: '进行中', paused: '已暂停', cancelled: '已取消' }[s]);
+            const cycleText = (c) => ({ month: '月', year: '年', week: '周' }[c]);
+            const isUrgent = (sub) => daysUntil(sub) <= 3 && sub.status === 'active';
+
+            // Modal 操作
+            const openSettings = () => document.getElementById('settings_modal').showModal();
+            const saveConfig = () => {
+                localStorage.setItem('gh_token', config.value.token);
+                localStorage.setItem('gh_owner', config.value.owner);
+                localStorage.setItem('gh_repo', config.value.repo);
+                localStorage.setItem('gh_path', config.value.path);
+                document.getElementById('settings_modal').close();
+                fetchData(); // 自动刷新
+            };
+
+            const openAddModal = () => {
+                form.value = { id: null, name: '', price: '', cycle: 'month', start_date: dayjs().format('YYYY-MM-DD'), status: 'active' };
+                isEditing.value = false;
+                document.getElementById('sub_modal').showModal();
+            };
+
+            const editSub = (sub) => {
+                form.value = { ...sub };
+                isEditing.value = true;
+                document.getElementById('sub_modal').showModal();
+            };
+
+            const saveSub = async () => {
+                if (!form.value.name) return alert('请输入名称');
+                if (isEditing.value) {
+                    const index = subs.value.findIndex(s => s.id === form.value.id);
+                    subs.value[index] = { ...form.value };
+                } else {
+                    subs.value.push({ ...form.value, id: Date.now().toString() });
+                }
+                document.getElementById('sub_modal').close();
+                await syncToGithub(); // 自动保存
+            };
+
+            const deleteSub = async (id) => {
+                if(confirm('确定删除吗？')) {
+                    subs.value = subs.value.filter(s => s.id !== id);
+                    await syncToGithub();
+                }
+            };
+
+            onMounted(() => {
+                if (config.value.token) fetchData();
+            });
+
+            return {
+                subs, loading, config, form, isEditing, sortedSubs, totalMonthly,
+                openSettings, saveConfig, openAddModal, editSub, saveSub, deleteSub, fetchData,
+                calculateNextDate, daysUntil, statusColor, statusText, cycleText, isUrgent
+            };
+        }
+    }).mount('#app');
+</script>
+</body>
+</html>
