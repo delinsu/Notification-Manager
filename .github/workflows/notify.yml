@@ -7,6 +7,9 @@ on:
     - cron: '0 1,13 * * *'
   workflow_dispatch: # 允许手动点击按钮触发测试
 
+permissions:
+  contents: read
+  
 jobs:
   notify:
     runs-on: ubuntu-latest

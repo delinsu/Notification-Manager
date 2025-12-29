@@ -2,56 +2,97 @@ const fs = require('fs');
 const path = require('path');
 const https = require('https');
 
-// 读取数据文件
-const dataPath = path.join(__dirname, '../subscriptions.json');
-const subscriptions = JSON.parse(fs.readFileSync(dataPath, 'utf8'));
-
-// Bark 配置
+// --- 配置区域 ---
+// 确保这个路径相对于脚本执行的位置是正确的 (通常在项目根目录执行 node scripts/check-subs.js)
+const DATA_FILE = 'subscriptions.json'; 
 const BARK_SERVER = 'https://bark-server-2z8w.onrender.com/bark';
-const BARK_DEVICE_KEY = process.env.BARK_KEY; // 从 GitHub Secrets 获取
+// 将你的 GitHub Pages 网址填在这里，点击通知可以直接跳转管理
+const DASHBOARD_URL = 'https://delinsu.github.io/Notification-Manager/'; 
+
+const BARK_DEVICE_KEY = process.env.BARK_KEY;
 
 if (!BARK_DEVICE_KEY) {
     console.error("Error: BARK_KEY environment variable is not set.");
     process.exit(1);
 }
 
-// 简单的日期处理函数 (不依赖 dayjs 以减少 action 安装依赖的时间)
-function addDate(dateStr, cycle) {
-    const date = new Date(dateStr);
-    if (cycle === 'month') date.setMonth(date.getMonth() + 1);
-    else if (cycle === 'year') date.setFullYear(date.getFullYear() + 1);
-    else if (cycle === 'week') date.setDate(date.getDate() + 7);
-    return date;
+// --- 辅助函数 ---
+
+// 获取北京时间的当前日期对象（清除时分秒）
+function getBeijingToday() {
+    // 创建一个基于 UTC 的当前时间
+    const now = new Date();
+    // 使用 Intl 转换为北京时间字符串 "YYYY/MM/DD"
+    const beijingTimeStr = new Intl.DateTimeFormat('en-US', {
+        timeZone: 'Asia/Shanghai',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+    }).format(now);
+    
+    // 重新构造 Date 对象 (注意 MM/DD/YYYY 格式)
+    const [month, day, year] = beijingTimeStr.split('/');
+    const beijingDate = new Date(`${year}-${month}-${day}`);
+    beijingDate.setHours(0, 0, 0, 0);
+    return beijingDate;
 }
 
+// 计算下一个扣费日
 function getNextBillingDate(startStr, cycle) {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0); // 清除时分秒
-    
+    const today = getBeijingToday();
     let nextDate = new Date(startStr);
+    // 简单修正时区偏移带来的日期解析误差，统一处理为当地时间0点
+    nextDate.setHours(0,0,0,0);
     
-    // 如果起始日期就是未来，直接返回
+    // 如果开始日期就是未来，直接返回
     if (nextDate >= today) return nextDate;
 
-    // 循环直到日期 >= 今天
+    // 循环增加直到 >= 今天
     while (nextDate < today) {
-        nextDate = addDate(nextDate, cycle);
+        if (cycle === 'month') {
+            // 处理月末逻辑，如 1.31 -> 2.28
+            const d = nextDate.getDate();
+            nextDate.setMonth(nextDate.getMonth() + 1);
+            if (nextDate.getDate() !== d) {
+                // 如果日期变了（说明溢出到了下个月），设置为上个月最后一天
+                nextDate.setDate(0);
+            }
+        } else if (cycle === 'year') {
+            nextDate.setFullYear(nextDate.getFullYear() + 1);
+        } else if (cycle === 'week') {
+            nextDate.setDate(nextDate.getDate() + 7);
+        }
     }
     return nextDate;
 }
 
 function formatDate(date) {
-    return date.toISOString().split('T')[0];
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
 }
 
-// 封装一个带重试机制的请求函数
-function sendRequest(url, retries = 3) {
+// Bark 推送函数, 带重试机制的请求
+function sendBark(title, body, group = '订阅管理') {
     return new Promise((resolve, reject) => {
-        const req = https.get(url, (res) => {
+        // 构建 Bark 参数
+        const params = new URLSearchParams({
+            group: group,
+            icon: 'https://cdn-icons-png.flaticon.com/512/2933/2933116.png',
+            isArchive: 1, // 保存历史记录
+            sound: 'minuet', // 提示音
+            url: DASHBOARD_URL // 点击跳转
+        });
+
+        // 拼接 URL
+        const fullUrl = `${BARK_SERVER}/${BARK_DEVICE_KEY}/${encodeURIComponent(title)}/${encodeURIComponent(body)}?${params.toString()}`;
+
+        const req = https.get(fullUrl, (res) => {
             if (res.statusCode >= 200 && res.statusCode < 300) {
                 resolve(res.statusCode);
             } else {
-                reject(new Error(`Status Code: ${res.statusCode}`));
+                reject(new Error(`Bark API Status: ${res.statusCode}`));
             }
         });
         req.on('error', (err) => {
@@ -59,50 +100,71 @@ function sendRequest(url, retries = 3) {
                 console.log(`Request failed, retrying... (${retries} left)`);
                 setTimeout(() => {
                     sendRequest(url, retries - 1).then(resolve).catch(reject);
-                }, 5000); // 失败后等待 5 秒重试 (给 Render 启动时间)
+                }, 120000); // 失败后等待 2 分钟重试 (给 Render 启动时间)
             } else {
                 reject(err);
             }
         });
         
         // 设置超时，防止 Render 启动太慢导致挂起
-        req.setTimeout(60000, () => { // 60秒超时
+        req.setTimeout(150000, () => {
             req.destroy();
         });
     });
 }
+
+// --- 主逻辑 ---
 async function main() {
-    const todayStr = formatDate(new Date());
+    // 读取文件
+    let subscriptions = [];
+    try {
+        const dataPath = path.resolve(__dirname, '..', DATA_FILE);
+        const rawData = fs.readFileSync(dataPath, 'utf8');
+        subscriptions = JSON.parse(rawData);
+    } catch (e) {
+        console.error("Failed to read subscription file:", e.message);
+        // 如果文件不存在或解析失败，不做任何事，直接退出
+        return;
+    }
+
+    const today = getBeijingToday();
     const messages = [];
+    let totalDue = 0;
+
     subscriptions.forEach(sub => {
         if (sub.status !== 'active') return;
+
         const nextDate = getNextBillingDate(sub.start_date, sub.cycle);
-        const nextDateStr = formatDate(nextDate);
-        const diffTime = nextDate - new Date(todayStr);
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
-        console.log(`Checking ${sub.name}: Next bill ${nextDateStr}, Days left: ${diffDays}`);
+        
+        // 计算天数差
+        const diffTime = nextDate - today;
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        const currency = sub.currency || '¥';
+
         if (diffDays === 0) {
-            messages.push(`【今日扣费】${sub.name} (¥${sub.price})`);
-        } else if (diffDays > 0 && diffDays <= 2) {
-            messages.push(`【${diffDays}天后】${sub.name} 即将扣费`);
+            messages.push(`🔴 [今日扣费] ${sub.name} ${currency}${sub.price}`);
+            totalDue += parseFloat(sub.price);
+        } else if (diffDays === 1) {
+            messages.push(`🟡 [明天扣费] ${sub.name} ${currency}${sub.price}`);
+        } else if (diffDays <= 3) {
+            messages.push(`🔵 [${diffDays}天后] ${sub.name} ${currency}${sub.price}`);
         }
     });
+
     if (messages.length > 0) {
-        const title = "订阅扣费提醒";
+        console.log("Found upcoming subscriptions:", messages);
+        const title = `订阅提醒：${messages.length} 个项目即将扣费`;
         const body = messages.join('\n');
-        const url = `${BARK_SERVER}/${BARK_DEVICE_KEY}/${encodeURIComponent(title)}/${encodeURIComponent(body)}?group=订阅管理&icon=https://cdn-icons-png.flaticon.com/512/2933/2933116.png`;
-        
-        console.log("Sending notification to Bark...");
         
         try {
-            await sendRequest(url);
-            console.log("Notification sent successfully!");
+            await sendBark(title, body);
+            console.log("✅ Bark notification sent.");
         } catch (error) {
-            console.error("Failed to send notification after retries:", error.message);
-            // 即使失败也不要 exit(1)，以免 GitHub Action 标记为失败（除非你想收到 Action 失败的邮件）
+            console.error("❌ Failed to send Bark:", error.message);
         }
     } else {
-        console.log("No subscriptions due soon.");
+        console.log("✅ No subscriptions due in next 3 days.");
     }
 }
+
 main();
