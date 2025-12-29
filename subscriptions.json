@@ -4,7 +4,7 @@
     "name": "Google",
     "price": 20,
     "cycle": "month",
-    "start_date": "2025-12-30",
+    "start_date": "2025-12-31",
     "status": "active"
   }
 ]
