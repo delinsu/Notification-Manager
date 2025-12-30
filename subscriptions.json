@@ -5,6 +5,7 @@
     "price": 20,
     "cycle": "month",
     "start_date": "2025-12-31",
-    "status": "active"
+    "status": "active",
+    "currency": "CNY"
   }
 ]
