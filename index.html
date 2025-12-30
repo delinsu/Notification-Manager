@@ -15,7 +15,7 @@
                 extend: {
                     colors: {
                         gray: { 50: '#F9FAFB', 100: '#F3F4F6', 200: '#E5E7EB', 300: '#D1D5DB', 400: '#9CA3AF', 500: '#6B7280', 600: '#4B5563', 700: '#374151', 800: '#1F2937', 900: '#111827', 950: '#030712' },
-                        primary: { 600: '#2563EB', 700: '#1D4ED8' } // 经典的宝蓝色，清晰专业
+                        primary: { 600: '#2563EB', 700: '#1D4ED8' }
                     },
                     fontFamily: {
                         sans: ['"Inter"', 'system-ui', '-apple-system', 'sans-serif'],
@@ -24,7 +24,7 @@
             }
         }
     </script>
-    <!-- DaisyUI (仅用于 Modal 和 Toggle 等小组件，不用于布局) -->
+    <!-- DaisyUI -->
     <link href="https://cdn.jsdelivr.net/npm/daisyui@4.4.19/dist/full.min.css" rel="stylesheet" type="text/css" />
     <!-- Day.js -->
     <script src="https://cdn.jsdelivr.net/npm/dayjs@1/dayjs.min.js"></script>
@@ -38,20 +38,12 @@
             -moz-osx-font-smoothing: grayscale;
             text-rendering: optimizeLegibility;
         }
-        
-        /* 自定义侧边栏过渡 */
         .sidebar-enter-active, .sidebar-leave-active { transition: transform 0.3s ease-in-out; }
         .sidebar-enter-from, .sidebar-leave-to { transform: translateX(100%); }
-        
-        /* 遮罩过渡 */
         .fade-enter-active, .fade-leave-active { transition: opacity 0.3s ease; }
         .fade-enter-from, .fade-leave-to { opacity: 0; }
-
-        /* 卡片列表动画 */
         .list-enter-active, .list-leave-active { transition: all 0.3s ease; }
         .list-enter-from, .list-leave-to { opacity: 0; transform: translateY(10px); }
-
-        /* 隐藏滚动条 */
         .no-scrollbar::-webkit-scrollbar { display: none; }
     </style>
 </head>
@@ -59,7 +51,7 @@
 
 <div id="app" class="relative min-h-screen flex flex-col">
 
-    <!-- 1. 顶部导航 (纯色背景，拒绝模糊) -->
+    <!-- 1. 顶部导航 -->
     <nav class="sticky top-0 z-20 w-full bg-white/95 dark:bg-gray-900/95 border-b border-gray-200 dark:border-gray-800 supports-[backdrop-filter]:bg-white/90">
         <div class="max-w-5xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
             <div class="flex items-center gap-3">
@@ -70,7 +62,7 @@
             </div>
 
             <div class="flex items-center gap-3">
-                <!-- 状态胶囊 -->
+                <!-- 状态 -->
                 <div class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
                     <div v-if="syncStatus === 'syncing'" class="loading loading-spinner loading-xs text-primary-600"></div>
                     <div v-else class="w-2 h-2 rounded-full" :class="statusDotColor"></div>
@@ -83,7 +75,7 @@
                     <svg v-else xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z" clip-rule="evenodd"></path></svg>
                 </button>
 
-                <!-- 设置按钮 -->
+                <!-- 设置 -->
                 <button @click="settingsOpen = true" class="btn btn-circle btn-sm btn-ghost text-gray-500">
                     <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clip-rule="evenodd" /></svg>
                 </button>
@@ -91,10 +83,10 @@
         </div>
     </nav>
 
-    <!-- 2. 主内容区 (干净的布局) -->
+    <!-- 2. 主内容区 -->
     <main class="flex-grow w-full max-w-5xl mx-auto px-4 sm:px-6 py-8">
         
-        <!-- 欢迎/引导 -->
+        <!-- 引导 -->
         <div v-if="!config.token" class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-8 text-center shadow-sm">
             <h1 class="text-xl font-bold mb-2">欢迎使用订阅管理</h1>
             <p class="text-gray-500 mb-6">数据存储在 GitHub，安全、私密、免费。</p>
@@ -102,21 +94,16 @@
         </div>
 
         <div v-else>
-            <!-- 统计卡片 -->
+            <!-- 统计 -->
             <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-                <!-- 活跃数 -->
                 <div class="bg-white dark:bg-gray-900 p-5 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm">
                     <div class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">活跃订阅</div>
                     <div class="text-3xl font-bold text-gray-900 dark:text-white">{{ activeSubsCount }}</div>
                 </div>
-                
-                <!-- 月支出 -->
                 <div class="bg-white dark:bg-gray-900 p-5 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm">
                     <div class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">月支出</div>
                     <div class="text-3xl font-bold text-gray-900 dark:text-white">¥{{ totalMonthly }}</div>
                 </div>
-
-                <!-- 下次扣费 (占2格) -->
                 <div class="col-span-2 bg-white dark:bg-gray-900 p-5 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm flex justify-between items-center">
                     <div>
                         <div class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">最近扣费</div>
@@ -139,7 +126,6 @@
                     
                     <div class="flex justify-between items-start mb-4">
                         <div class="flex items-center gap-3">
-                            <!-- 简单的字母图标 -->
                             <div class="w-10 h-10 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 flex items-center justify-center font-bold text-sm">
                                 {{ sub.name.charAt(0).toUpperCase() }}
                             </div>
@@ -163,35 +149,31 @@
                          </div>
                     </div>
 
-                    <!-- 进度条 -->
                     <div v-if="sub.status === 'active'" class="absolute bottom-0 left-0 right-0 h-1 bg-gray-50 dark:bg-gray-800">
                         <div class="h-full" :class="isUrgent(sub) ? 'bg-red-500' : 'bg-blue-500'" :style="{ width: getProgress(sub) + '%' }"></div>
                     </div>
                 </div>
             </transition-group>
 
-            <!-- Loading -->
             <div v-if="loading && subs.length === 0" class="text-center py-20">
                 <span class="loading loading-spinner loading-lg text-gray-300"></span>
             </div>
 
-            <!-- Empty -->
             <div v-if="!loading && subs.length === 0" class="text-center py-20 text-gray-400">
                 暂无数据，点击右下角添加
             </div>
         </div>
     </main>
 
-    <!-- FAB 按钮 -->
+    <!-- FAB -->
     <button @click="openAddModal" class="fixed bottom-8 right-8 w-14 h-14 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-full shadow-xl flex items-center justify-center hover:scale-105 active:scale-95 transition-transform z-10">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
     </button>
 
-    <!-- 3. 独立侧边栏 (Fixed Overlay) - 不再包裹主内容 -->
+    <!-- 侧边栏 -->
     <transition name="fade">
         <div v-if="settingsOpen" class="fixed inset-0 bg-black/30 z-40 backdrop-blur-none" @click="settingsOpen = false"></div>
     </transition>
-    
     <transition name="sidebar">
         <div v-if="settingsOpen" class="fixed inset-y-0 right-0 w-80 bg-white dark:bg-gray-900 shadow-2xl z-50 p-6 flex flex-col border-l border-gray-200 dark:border-gray-800">
             <div class="flex justify-between items-center mb-6 pb-4 border-b border-gray-100 dark:border-gray-800">
@@ -219,12 +201,12 @@
             </div>
 
             <div class="mt-4 pt-4 border-t border-gray-100 dark:border-gray-800 text-center">
-                <p class="text-xs text-gray-400">Pure Mode v3.1</p>
+                <p class="text-xs text-gray-400">Pure Mode v3.2</p>
             </div>
         </div>
     </transition>
 
-    <!-- Modal 弹窗 -->
+    <!-- Modal -->
     <dialog id="sub_modal" class="modal modal-bottom sm:modal-middle">
         <div class="modal-box bg-white dark:bg-gray-900 rounded-2xl p-6">
             <h3 class="font-bold text-lg mb-4">{{ isEditing ? '编辑' : '新建' }}</h3>
@@ -278,7 +260,7 @@
             const syncStatus = ref('idle'); 
             const sha = ref('');
             const isEditing = ref(false);
-            const settingsOpen = ref(false); // 独立变量控制侧边栏
+            const settingsOpen = ref(false);
             const isDark = ref(localStorage.getItem('theme') === 'dark');
 
             const config = ref({
@@ -290,7 +272,7 @@
 
             const form = ref({ id: null, name: '', price: '', currency: 'CNY', cycle: 'month', start_date: '', status: 'active' });
 
-            // Theme Logic
+            // Theme
             const toggleTheme = () => isDark.value = !isDark.value;
             watch(isDark, (val) => {
                 if(val) document.documentElement.classList.add('dark');
@@ -298,7 +280,7 @@
                 localStorage.setItem('theme', val ? 'dark' : 'light');
             }, { immediate: true });
 
-            // Status Logic
+            // Status
             const statusMessage = computed(() => {
                 if(syncStatus.value === 'syncing') return '同步中';
                 if(syncStatus.value === 'saved') return '已同步';
@@ -312,7 +294,7 @@
                 return 'bg-gray-300';
             });
 
-            // Business Logic
+            // Logic
             const calculateNextDate = (sub) => {
                 if (sub.status !== 'active') return '-';
                 const today = dayjs().startOf('day');
@@ -376,7 +358,7 @@
                 return active.length ? daysUntil(active[0]) : 0;
             });
 
-            // GitHub API
+            // API
             const u8ToBase64 = (str) => btoa(String.fromCharCode(...new TextEncoder().encode(str)));
             const b64ToU8 = (str) => new TextDecoder().decode(Uint8Array.from(atob(str), c => c.charCodeAt(0)));
 
@@ -386,11 +368,14 @@
                 syncStatus.value = 'syncing';
                 try {
                     const url = `https://api.github.com/repos/${config.value.owner}/${config.value.repo}/contents/${config.value.path}`;
+                    // 修复 CORS 问题：
+                    // 1. 移除 'Cache-Control' header
+                    // 2. 使用 cache: 'no-store' 来避免缓存
                     const res = await fetch(url, {
+                        cache: 'no-store', 
                         headers: { 
                             'Authorization': `token ${config.value.token}`, 
-                            'Accept': 'application/vnd.github.v3+json',
-                            'Cache-Control': 'no-cache'
+                            'Accept': 'application/vnd.github.v3+json'
                         }
                     });
                     
