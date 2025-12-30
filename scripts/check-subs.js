@@ -17,7 +17,18 @@ if (!BARK_DEVICE_KEY) {
 }
 
 // --- 辅助函数 ---
-
+// 货币符号映射
+const currencyMap = {
+    'CNY': '¥',
+    'USD': '$',
+    'HKD': 'HK$',
+    'JPY': 'JP¥',
+    'EUR': '€',
+    'GBP': '£'
+};
+function getCurrencySymbol(code) {
+    return currencyMap[code] || '¥';
+}
 // 获取北京时间的当前日期对象（清除时分秒）
 function getBeijingToday() {
     // 创建一个基于 UTC 的当前时间
@@ -66,12 +77,6 @@ function getNextBillingDate(startStr, cycle) {
     return nextDate;
 }
 
-function formatDate(date) {
-    const y = date.getFullYear();
-    const m = String(date.getMonth() + 1).padStart(2, '0');
-    const d = String(date.getDate()).padStart(2, '0');
-    return `${y}-${m}-${d}`;
-}
 
 // Bark 推送函数, 带重试机制的请求
 function sendBark(title, body, group = '订阅管理') {
@@ -82,7 +87,8 @@ function sendBark(title, body, group = '订阅管理') {
             icon: 'https://cdn-icons-png.flaticon.com/512/2933/2933116.png',
             isArchive: 1, // 保存历史记录
             sound: 'minuet', // 提示音
-            url: DASHBOARD_URL // 点击跳转
+            url: DASHBOARD_URL, // 点击跳转
+            level: 'active' // 设为 active 会点亮屏幕
         });
 
         // 拼接 URL
@@ -119,8 +125,13 @@ async function main() {
     let subscriptions = [];
     try {
         const dataPath = path.resolve(__dirname, '..', DATA_FILE);
-        const rawData = fs.readFileSync(dataPath, 'utf8');
-        subscriptions = JSON.parse(rawData);
+        if (fs.existsSync(dataPath)) {
+            const rawData = fs.readFileSync(dataPath, 'utf8');
+            subscriptions = JSON.parse(rawData);
+        } else {
+            console.log("No subscriptions.json found, skipping.");
+            return;
+        }
     } catch (e) {
         console.error("Failed to read subscription file:", e.message);
         // 如果文件不存在或解析失败，不做任何事，直接退出
@@ -139,15 +150,15 @@ async function main() {
         // 计算天数差
         const diffTime = nextDate - today;
         const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-        const currency = sub.currency || '¥';
-
+        const symbol = getCurrencySymbol(sub.currency);
+        // 逻辑：当天、明天、后天提醒 (0, 1, 2)
         if (diffDays === 0) {
-            messages.push(`🔴 [今日扣费] ${sub.name} ${currency}${sub.price}`);
+            messages.push(`🔴 [今日扣费] ${sub.name} ${symbol}${sub.price}`);
             totalDue += parseFloat(sub.price);
         } else if (diffDays === 1) {
-            messages.push(`🟡 [明天扣费] ${sub.name} ${currency}${sub.price}`);
+            messages.push(`🟡 [明天扣费] ${sub.name} ${symbol}${sub.price}`);
         } else if (diffDays <= 3) {
-            messages.push(`🔵 [${diffDays}天后] ${sub.name} ${currency}${sub.price}`);
+            messages.push(`🔵 [${diffDays}天后] ${sub.name} ${symbol}${sub.price}`);
         }
     });
 
@@ -161,6 +172,7 @@ async function main() {
             console.log("✅ Bark notification sent.");
         } catch (error) {
             console.error("❌ Failed to send Bark:", error.message);
+            process.exit(1); // 报错退出，让 GitHub Action 显示红叉
         }
     } else {
         console.log("✅ No subscriptions due in next 3 days.");

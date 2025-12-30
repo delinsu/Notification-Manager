@@ -1,145 +1,334 @@
 <!DOCTYPE html>
-<html lang="zh-CN" data-theme="light">
+<html lang="zh-CN" class="antialiased">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>订阅管理</title>
-    <!-- 引入 Vue 3, Tailwind, DaisyUI -->
-    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Subscription Manager</title>
+    <!-- Vue 3 -->
+    <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+    <!-- Tailwind CSS (使用CDN最新版以支持更多特性) -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        gray: { 50: '#f9fafb', 100: '#f3f4f6', 200: '#e5e7eb', 300: '#d1d5db', 400: '#9ca3af', 500: '#6b7280', 600: '#4b5563', 700: '#374151', 800: '#1f2937', 900: '#111827', 950: '#030712' },
+                        primary: { 50: '#eef2ff', 100: '#e0e7ff', 500: '#6366f1', 600: '#4f46e5', 700: '#4338ca' }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'ui-sans-serif', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- DaisyUI (仅用于组件逻辑，样式我们自己控制以求精致) -->
     <link href="https://cdn.jsdelivr.net/npm/daisyui@4.4.19/dist/full.min.css" rel="stylesheet" type="text/css" />
-    <!-- 引入 Day.js 处理日期 -->
+    <!-- Day.js -->
     <script src="https://cdn.jsdelivr.net/npm/dayjs@1/dayjs.min.js"></script>
-</head>
-<body class="bg-base-200 min-h-screen p-4">
-
-<div id="app" class="max-w-3xl mx-auto">
-    <!-- 顶部导航 -->
-    <div class="navbar bg-base-100 rounded-box shadow-lg mb-6">
-        <div class="flex-1">
-            <a class="btn btn-ghost text-xl">📅 订阅管家</a>
-        </div>
-        <div class="flex-none gap-2">
-            <button @click="openSettings" class="btn btn-square btn-ghost">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="inline-block w-5 h-5 stroke-current"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
-            </button>
-            <button @click="fetchData" class="btn btn-primary btn-sm">刷新/同步</button>
-        </div>
-    </div>
-	
-	<!-- 统计看板 -->
-    <div class="stats shadow w-full mb-6 bg-base-100">
-        <div class="stat">
-            <div class="stat-figure text-primary">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="inline-block w-8 h-8 stroke-current"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-            </div>
-            <div class="stat-title">活跃订阅数</div>
-            <div class="stat-value">{{ subs.filter(s => s.status === 'active').length }}</div>
-            <div class="stat-desc">个正在扣费的项目</div>
-        </div>
-        
-        <div class="stat">
-            <div class="stat-figure text-secondary">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="inline-block w-8 h-8 stroke-current"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"></path></svg>
-            </div>
-            <div class="stat-title">预估月支出</div>
-            <div class="stat-value text-secondary">¥{{ totalMonthly }}</div>
-            <div class="stat-desc">基于当前周期折算</div>
-        </div>
-    </div>
-
-    <!-- 列表区域 -->
-    <div v-if="loading" class="text-center py-10"><span class="loading loading-spinner loading-lg"></span></div>
+    <!-- Google Fonts: Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     
-    <div v-else class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div v-for="sub in sortedSubs" :key="sub.id" class="card bg-base-100 shadow-xl border-l-4" :class="statusColor(sub.status)">
-            <div class="card-body p-5">
-                <div class="flex justify-between items-start">
-                    <h2 class="card-title">{{ sub.name }}</h2>
-                    <div class="badge badge-outline">{{ statusText(sub.status) }}</div>
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        
+        /* 点阵背景 */
+        .bg-dots {
+            background-color: #f9fafb;
+            background-image: radial-gradient(#e5e7eb 1px, transparent 1px);
+            background-size: 24px 24px;
+        }
+        .dark .bg-dots {
+            background-color: #030712; /* Gray 950 */
+            background-image: radial-gradient(#1f2937 1px, transparent 1px);
+        }
+
+        /* 隐藏滚动条 */
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+        /* 卡片动画 */
+        .card-enter-active, .card-leave-active { transition: all 0.3s ease; }
+        .card-enter-from, .card-leave-to { opacity: 0; transform: translateY(10px); }
+
+        /* 精致的边框流动效果 (可选) */
+        .group:hover .border-gradient {
+            border-color: #6366f1;
+        }
+    </style>
+</head>
+<body class="bg-dots text-gray-800 dark:text-gray-200 transition-colors duration-300 min-h-screen flex flex-col">
+
+<div id="app" class="flex-grow flex flex-col">
+    <!-- 侧边栏抽屉容器 -->
+    <div class="drawer drawer-end">
+        <input id="settings-drawer" type="checkbox" class="drawer-toggle" v-model="drawerOpen" />
+        
+        <!-- 页面主要内容 -->
+        <div class="drawer-content flex flex-col min-h-screen">
+            
+            <!-- 顶部导航: 极简风格 -->
+            <nav class="sticky top-0 z-30 w-full backdrop-blur-md bg-white/70 dark:bg-gray-950/70 border-b border-gray-200 dark:border-gray-800">
+                <div class="max-w-6xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
+                    <!-- Logo -->
+                    <div class="flex items-center gap-2">
+                        <div class="w-6 h-6 rounded bg-primary-600 flex items-center justify-center text-white text-xs font-bold">S</div>
+                        <span class="font-semibold text-sm tracking-tight text-gray-900 dark:text-white">SubManager</span>
+                    </div>
+
+                    <!-- 右侧操作区 -->
+                    <div class="flex items-center gap-3">
+                        <!-- 状态指示 -->
+                        <div class="flex items-center gap-2 px-2 py-1 rounded bg-gray-100 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 transition-all">
+                            <div v-if="syncStatus === 'syncing'" class="w-2 h-2 rounded-full border border-primary-500 border-t-transparent animate-spin"></div>
+                            <div v-else class="w-2 h-2 rounded-full" :class="statusDotColor"></div>
+                            <span class="text-[10px] font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{{ statusMessage }}</span>
+                        </div>
+
+                        <!-- 模式切换 -->
+                        <button @click="toggleTheme" class="p-1.5 rounded-md text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+                            <svg v-if="!isDark" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4"><path d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z" fill-rule="evenodd" clip-rule="evenodd"></path></svg>
+                            <svg v-else xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4"><path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"></path></svg>
+                        </button>
+
+                        <!-- 设置 -->
+                        <label for="settings-drawer" class="p-1.5 rounded-md text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors cursor-pointer">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4"><path fill-rule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clip-rule="evenodd" /></svg>
+                        </label>
+                    </div>
                 </div>
-                <p class="text-2xl font-bold">¥{{ sub.price }} <span class="text-sm font-normal text-gray-500">/ {{ cycleText(sub.cycle) }}</span></p>
-                <div class="mt-2 text-sm text-gray-600">
-                    <p>起订日: {{ sub.start_date }}</p>
-                    <p class="font-semibold" :class="{'text-red-500': isUrgent(sub)}">
-                        下次扣费: {{ calculateNextDate(sub) }}
-                        <span v-if="sub.status === 'active'" class="text-xs font-normal">({{ daysUntil(sub) }}天后)</span>
-                    </p>
+            </nav>
+
+            <main class="flex-grow max-w-5xl mx-auto w-full px-4 sm:px-6 py-8">
+                
+                <!-- 未配置时的引导 -->
+                <div v-if="!config.token" class="flex flex-col items-center justify-center py-20 text-center">
+                    <div class="w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-2xl flex items-center justify-center mb-4">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-8 h-8 text-gray-400"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 10.5V6.75a4.5 4.5 0 119 0v3.75M3.75 21.75h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H3.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" /></svg>
+                    </div>
+                    <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">连接 GitHub 仓库</h2>
+                    <p class="text-sm text-gray-500 max-w-sm mb-6">为了保护您的隐私，所有数据将直接存储在您的私人仓库中。</p>
+                    <label for="settings-drawer" class="btn btn-sm btn-neutral px-6">配置 Token</label>
                 </div>
-                <div class="card-actions justify-end mt-4">
-                    <button @click="editSub(sub)" class="btn btn-sm btn-ghost">编辑</button>
-                    <button @click="deleteSub(sub.id)" class="btn btn-sm btn-error btn-outline">删除</button>
+
+                <div v-else>
+                    <!-- 数据概览 (精简版) -->
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+                        <div class="p-4 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm">
+                            <div class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">活跃订阅</div>
+                            <div class="text-2xl font-semibold text-gray-900 dark:text-white">{{ activeSubsCount }}</div>
+                        </div>
+                        <div class="p-4 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm">
+                            <div class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">月支出</div>
+                            <div class="text-2xl font-semibold text-gray-900 dark:text-white">¥{{ totalMonthly }}</div>
+                        </div>
+                        <div class="p-4 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm md:col-span-2">
+                             <div class="flex justify-between items-start">
+                                <div>
+                                    <div class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">最近扣费</div>
+                                    <div class="text-lg font-medium text-gray-900 dark:text-white truncate">{{ nextBillName }}</div>
+                                </div>
+                                <div class="text-right">
+                                    <div class="text-2xl font-semibold" :class="nextBillDays <= 3 ? 'text-rose-500' : 'text-gray-900 dark:text-white'">{{ nextBillDays }}</div>
+                                    <div class="text-[10px] text-gray-400">天后</div>
+                                </div>
+                             </div>
+                        </div>
+                    </div>
+
+                    <!-- 加载状态 -->
+                    <div v-if="loading && subs.length === 0" class="py-12 text-center">
+                        <span class="loading loading-dots loading-md text-gray-400"></span>
+                    </div>
+
+                    <!-- 订阅列表 (细腻卡片) -->
+                    <transition-group name="card" tag="div" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 pb-20">
+                        <div v-for="sub in sortedSubs" :key="sub.id" 
+                             class="group relative bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-5 hover:border-primary-500/30 hover:shadow-lg hover:shadow-gray-200/50 dark:hover:shadow-none transition-all duration-300"
+                             @click="editSub(sub)">
+                            
+                            <!-- 顶部信息 -->
+                            <div class="flex justify-between items-start mb-4">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-10 h-10 rounded-lg flex items-center justify-center text-sm font-bold transition-colors"
+                                        :class="getIconStyle(sub.name)">
+                                        {{ sub.name.charAt(0).toUpperCase() }}
+                                    </div>
+                                    <div>
+                                        <h3 class="text-base font-medium text-gray-900 dark:text-white leading-tight">{{ sub.name }}</h3>
+                                        <p class="text-xs text-gray-400 mt-0.5">{{ cycleText(sub.cycle) }}</p>
+                                    </div>
+                                </div>
+                                <span v-if="sub.status !== 'active'" class="px-2 py-0.5 rounded text-[10px] font-medium bg-gray-100 text-gray-500 dark:bg-gray-800">
+                                    {{ statusText(sub.status) }}
+                                </span>
+                            </div>
+
+                            <!-- 价格与日期 -->
+                            <div class="flex items-end justify-between">
+                                <div>
+                                    <div class="flex items-baseline gap-0.5">
+                                        <span class="text-xs font-medium text-gray-400">{{ getCurrencySymbol(sub.currency) }}</span>
+                                        <span class="text-xl font-semibold text-gray-900 dark:text-white" :class="{'opacity-40': sub.status !== 'active'}">{{ sub.price }}</span>
+                                    </div>
+                                </div>
+                                <div v-if="sub.status === 'active'" class="text-right">
+                                    <div class="text-xs font-medium" :class="isUrgent(sub) ? 'text-rose-500' : 'text-gray-500 dark:text-gray-400'">
+                                        {{ calculateNextDate(sub) }}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 底部极细进度条 -->
+                            <div v-if="sub.status === 'active'" class="absolute bottom-0 left-4 right-4 h-[2px] bg-gray-100 dark:bg-gray-800 overflow-hidden rounded-full mb-[-1px]">
+                                <div class="h-full rounded-full transition-all duration-500"
+                                     :class="isUrgent(sub) ? 'bg-rose-500' : 'bg-primary-500'"
+                                     :style="{ width: getProgress(sub) + '%' }"></div>
+                            </div>
+                        </div>
+                    </transition-group>
+
+                    <!-- 空状态 -->
+                    <div v-if="!loading && subs.length === 0" class="text-center py-16">
+                        <p class="text-sm text-gray-400">暂无订阅项目</p>
+                    </div>
+                </div>
+            </main>
+
+            <!-- 极简 FAB 按钮 -->
+            <button @click="openAddModal" class="fixed bottom-8 right-8 w-12 h-12 bg-gray-900 dark:bg-white text-white dark:text-black rounded-full shadow-xl flex items-center justify-center hover:scale-105 active:scale-95 transition-transform z-20">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
+            </button>
+
+        </div> <!-- End Drawer Content -->
+
+        <!-- 设置侧边栏 -->
+        <div class="drawer-side z-50">
+            <label for="settings-drawer" class="drawer-overlay bg-black/20 backdrop-blur-sm"></label>
+            <div class="menu p-0 w-80 min-h-full bg-white dark:bg-gray-950 border-r border-gray-200 dark:border-gray-800 text-base-content flex flex-col">
+                <div class="p-5 border-b border-gray-100 dark:border-gray-800 flex justify-between items-center">
+                    <h2 class="font-semibold text-gray-900 dark:text-white">设置</h2>
+                    <label for="settings-drawer" class="text-gray-400 hover:text-gray-600 cursor-pointer">✕</label>
+                </div>
+                
+                <div class="p-5 space-y-5 overflow-y-auto flex-grow">
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-xs font-medium text-gray-500 mb-1.5">GitHub Token</label>
+                            <input v-model.lazy="config.token" @change="saveConfig" type="password" class="w-full px-3 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg text-sm focus:outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-all placeholder-gray-400" placeholder="ghp_..." />
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-500 mb-1.5">用户名 (Owner)</label>
+                            <input v-model.lazy="config.owner" @change="saveConfig" type="text" class="w-full px-3 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg text-sm focus:outline-none focus:border-primary-500 transition-all" />
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-500 mb-1.5">仓库名 (Repo)</label>
+                            <input v-model.lazy="config.repo" @change="saveConfig" type="text" class="w-full px-3 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg text-sm focus:outline-none focus:border-primary-500 transition-all" />
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-500 mb-1.5">文件路径</label>
+                            <input v-model.lazy="config.path" @change="saveConfig" type="text" class="w-full px-3 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg text-sm focus:outline-none focus:border-primary-500 transition-all" placeholder="subscriptions.json" />
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="p-4 border-t border-gray-100 dark:border-gray-800 text-center">
+                    <p class="text-[10px] text-gray-400">Version 3.0 • Minimalist</p>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- 底部添加按钮 -->
-    <button @click="openAddModal" class="btn btn-circle btn-primary fixed bottom-8 right-8 shadow-xl text-2xl">+</button>
-
-    <!-- 编辑/添加 模态框 -->
-    <dialog id="sub_modal" class="modal">
-        <div class="modal-box">
-            <h3 class="font-bold text-lg mb-4">{{ isEditing ? '编辑订阅' : '新建订阅' }}</h3>
-            <div class="flex flex-col gap-3">
-                <input v-model="form.name" type="text" placeholder="订阅名称 (如 Netflix)" class="input input-bordered w-full" />
-                <div class="flex gap-2">
-                    <input v-model.number="form.price" type="number" placeholder="金额" class="input input-bordered w-full" />
-                    <select v-model="form.cycle" class="select select-bordered">
-                        <option value="month">每月</option>
-                        <option value="year">每年</option>
-                        <option value="week">每周</option>
-                    </select>
+    <!-- 弹窗 (Modal) - 极简白板风格 -->
+    <dialog id="sub_modal" class="modal modal-bottom sm:modal-middle">
+        <div class="modal-box bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-6 shadow-2xl max-w-md">
+            <h3 class="font-semibold text-lg text-gray-900 dark:text-white mb-6">
+                {{ isEditing ? '编辑订阅' : '新建订阅' }}
+            </h3>
+            
+            <div class="space-y-4">
+                <div>
+                    <input v-model="form.name" type="text" placeholder="服务名称 (如 Netflix)" class="w-full px-0 py-2 bg-transparent border-b border-gray-200 dark:border-gray-700 text-lg font-medium placeholder-gray-300 focus:outline-none focus:border-gray-900 dark:focus:border-white transition-colors" />
                 </div>
-                <label class="form-control w-full">
-                    <div class="label"><span class="label-text">首次扣费日期</span></div>
-                    <input v-model="form.start_date" type="date" class="input input-bordered w-full" />
-                </label>
-                <select v-model="form.status" class="select select-bordered w-full">
-                    <option value="active">激活 (Active)</option>
-                    <option value="paused">暂停 (Paused)</option>
-                    <option value="cancelled">已取消 (Cancelled)</option>
-                </select>
-            </div>
-            <div class="modal-action">
-                <form method="dialog">
-                    <button class="btn">取消</button>
-                </form>
-                <button @click="saveSub" class="btn btn-primary">保存</button>
-            </div>
-        </div>
-    </dialog>
+                
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">金额</label>
+                        <input v-model.number="form.price" type="number" step="0.01" class="w-full px-3 py-2 bg-gray-50 dark:bg-gray-800 rounded-lg text-sm focus:outline-none" />
+                    </div>
+                     <div>
+                        <label class="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">币种</label>
+                         <select v-model="form.currency" class="w-full px-3 py-2 bg-gray-50 dark:bg-gray-800 rounded-lg text-sm focus:outline-none appearance-none">
+                            <option value="CNY">CNY (¥)</option>
+                            <option value="USD">USD ($)</option>
+                            <option value="HKD">HKD ($)</option>
+                            <option value="JPY">JPY (¥)</option>
+                        </select>
+                    </div>
+                </div>
 
-    <!-- 设置模态框 -->
-    <dialog id="settings_modal" class="modal">
-        <div class="modal-box">
-            <h3 class="font-bold text-lg">GitHub 配置</h3>
-            <p class="py-4 text-sm text-gray-500">为了同步数据，请输入你的 GitHub Personal Access Token 和仓库信息。这些信息仅保存在本地。</p>
-            <div class="flex flex-col gap-3">
-                <input v-model="config.token" type="password" placeholder="GitHub Token (ghp_...)" class="input input-bordered" />
-                <input v-model="config.owner" type="text" placeholder="用户名 (User)" class="input input-bordered" />
-                <input v-model="config.repo" type="text" placeholder="仓库名 (Repo)" class="input input-bordered" />
-                <input v-model="config.path" type="text" placeholder="文件路径 (subscriptions.json)" class="input input-bordered" />
+                <div class="grid grid-cols-2 gap-4">
+                     <div>
+                        <label class="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">周期</label>
+                        <select v-model="form.cycle" class="w-full px-3 py-2 bg-gray-50 dark:bg-gray-800 rounded-lg text-sm focus:outline-none appearance-none">
+                            <option value="month">每月</option>
+                            <option value="year">每年</option>
+                            <option value="week">每周</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">状态</label>
+                        <select v-model="form.status" class="w-full px-3 py-2 bg-gray-50 dark:bg-gray-800 rounded-lg text-sm focus:outline-none appearance-none">
+                            <option value="active">启用</option>
+                            <option value="paused">暂停</option>
+                            <option value="cancelled">取消</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">开始日期</label>
+                    <input v-model="form.start_date" type="date" class="w-full px-3 py-2 bg-gray-50 dark:bg-gray-800 rounded-lg text-sm focus:outline-none" />
+                </div>
             </div>
-            <div class="modal-action">
-                <form method="dialog"><button class="btn">关闭</button></form>
-                <button @click="saveConfig" class="btn btn-success">保存配置</button>
+
+            <div class="flex justify-between items-center mt-8 pt-4 border-t border-gray-100 dark:border-gray-800">
+                <button v-if="isEditing" @click="deleteSub(form.id)" class="text-xs text-rose-500 hover:text-rose-600 font-medium px-2">删除</button>
+                <div v-else></div> <!-- spacer -->
+                
+                <div class="flex gap-3">
+                    <form method="dialog">
+                        <button class="px-4 py-2 text-sm text-gray-500 hover:text-gray-900 transition-colors">取消</button>
+                    </form>
+                    <button @click="saveSub" class="px-5 py-2 bg-gray-900 dark:bg-white text-white dark:text-black rounded-lg text-sm font-medium hover:opacity-90 transition-opacity">
+                        保存
+                    </button>
+                </div>
             </div>
         </div>
+        <form method="dialog" class="modal-backdrop bg-black/20 backdrop-blur-sm">
+            <button>close</button>
+        </form>
     </dialog>
 </div>
 
 <script>
-    const { createApp, ref, computed, onMounted } = Vue;
+    const { createApp, ref, computed, onMounted, watch } = Vue;
 
     createApp({
         setup() {
+            // Data
             const subs = ref([]);
             const loading = ref(false);
-            const sha = ref(''); // 用于 GitHub API 更新文件
+            const syncStatus = ref('idle'); 
+            const sha = ref('');
             const isEditing = ref(false);
-            
-            // 配置信息
+            const drawerOpen = ref(false);
+            const isDark = ref(localStorage.getItem('theme') === 'dark');
+
+            // Config
             const config = ref({
                 token: localStorage.getItem('gh_token') || '',
                 owner: localStorage.getItem('gh_owner') || '',
@@ -147,16 +336,47 @@
                 path: localStorage.getItem('gh_path') || 'subscriptions.json'
             });
 
-            // 表单数据
-            const form = ref({ id: null, name: '', price: '', cycle: 'month', start_date: '', status: 'active' });
+            const form = ref({ id: null, name: '', price: '', currency: 'CNY', cycle: 'month', start_date: '', status: 'active' });
 
-            // 核心算法：计算下一次扣费日期
+            // Init Theme
+            const toggleTheme = () => isDark.value = !isDark.value;
+            
+            watch(isDark, (val) => {
+                if(val) document.documentElement.classList.add('dark');
+                else document.documentElement.classList.remove('dark');
+                localStorage.setItem('theme', val ? 'dark' : 'light');
+            }, { immediate: true });
+
+            // Computed Status
+            const statusMessage = computed(() => {
+                switch(syncStatus.value) {
+                    case 'syncing': return 'SYNCING';
+                    case 'saved': return 'SAVED';
+                    case 'error': return 'ERROR';
+                    default: return 'READY';
+                }
+            });
+
+            const statusDotColor = computed(() => {
+                switch(syncStatus.value) {
+                    case 'syncing': return 'bg-yellow-400';
+                    case 'saved': return 'bg-green-500';
+                    case 'error': return 'bg-rose-500';
+                    default: return 'bg-gray-300 dark:bg-gray-600';
+                }
+            });
+
+            // Logic
             const calculateNextDate = (sub) => {
-                if (sub.status !== 'active') return '---';
+                if (sub.status !== 'active') return '-';
                 const today = dayjs().startOf('day');
                 let nextDate = dayjs(sub.start_date);
                 
-                // 循环增加周期直到日期大于等于今天
+                if (nextDate.isBefore(today.subtract(1, 'year')) && sub.cycle === 'month') {
+                    const diffYears = today.diff(nextDate, 'year');
+                    nextDate = nextDate.add(diffYears, 'year');
+                }
+
                 while (nextDate.isBefore(today)) {
                     if (sub.cycle === 'month') nextDate = nextDate.add(1, 'month');
                     else if (sub.cycle === 'year') nextDate = nextDate.add(1, 'year');
@@ -166,103 +386,137 @@
             };
 
             const daysUntil = (sub) => {
-                if (sub.status !== 'active') return 0;
+                if (sub.status !== 'active') return 999;
                 const nextDate = dayjs(calculateNextDate(sub));
                 return nextDate.diff(dayjs().startOf('day'), 'day');
             };
 
-            // 排序：优先显示 Active，且日期最近的
+            const getProgress = (sub) => {
+                 if (sub.status !== 'active') return 0;
+                 const totalDays = sub.cycle === 'year' ? 365 : sub.cycle === 'week' ? 7 : 30;
+                 const left = daysUntil(sub);
+                 return Math.max(0, Math.min(100, 100 - ((left / totalDays) * 100)));
+            };
+
             const sortedSubs = computed(() => {
                 return [...subs.value].sort((a, b) => {
                     if (a.status !== b.status) return a.status === 'active' ? -1 : 1;
-                    const dateA = calculateNextDate(a);
-                    const dateB = calculateNextDate(b);
-                    if (dateA === '---') return 1;
-                    if (dateB === '---') return -1;
-                    return dayjs(dateA).unix() - dayjs(dateB).unix();
+                    return daysUntil(a) - daysUntil(b);
                 });
             });
-			// 计算每月总支出
+
+            const activeSubsCount = computed(() => subs.value.filter(s => s.status === 'active').length);
             const totalMonthly = computed(() => {
                 return subs.value.reduce((total, sub) => {
-                    if (sub.status !== 'active') return total; // 只计算激活的
-                    let monthlyPrice = 0;
-                    if (sub.cycle === 'month') monthlyPrice = sub.price;
-                    else if (sub.cycle === 'year') monthlyPrice = sub.price / 12;
-                    else if (sub.cycle === 'week') monthlyPrice = sub.price * 4.3; // 粗略估算
-                    return total + monthlyPrice;
+                    if (sub.status !== 'active') return total;
+                    let price = parseFloat(sub.price);
+                    if (sub.currency === 'USD') price *= 7.2;
+                    else if (sub.currency === 'HKD') price *= 0.92;
+                    else if (sub.currency === 'JPY') price *= 0.05;
+
+                    if (sub.cycle === 'month') return total + price;
+                    if (sub.cycle === 'year') return total + (price / 12);
+                    if (sub.cycle === 'week') return total + (price * 4.3);
+                    return total;
                 }, 0).toFixed(2);
             });
 
-            // API 操作
+            const nextBillName = computed(() => {
+                const active = sortedSubs.value.filter(s => s.status === 'active');
+                return active.length ? active[0].name : '-';
+            });
+            const nextBillDays = computed(() => {
+                const active = sortedSubs.value.filter(s => s.status === 'active');
+                return active.length ? daysUntil(active[0]) : 0;
+            });
+
+            // UI Helpers
+            const getIconStyle = (name) => {
+                const styles = [
+                    'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300',
+                    'bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-300',
+                    'bg-indigo-50 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-300',
+                    'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-300',
+                ];
+                return styles[name.length % styles.length];
+            };
+
+            // API Logic
+            const u8ToBase64 = (str) => btoa(String.fromCharCode(...new TextEncoder().encode(str)));
+            const b64ToU8 = (str) => new TextDecoder().decode(Uint8Array.from(atob(str), c => c.charCodeAt(0)));
+
             const fetchData = async () => {
-                if (!config.value.token || !config.value.repo) return alert('请先配置 GitHub 设置');
+                if (!config.value.token) return;
                 loading.value = true;
+                syncStatus.value = 'syncing';
                 try {
                     const url = `https://api.github.com/repos/${config.value.owner}/${config.value.repo}/contents/${config.value.path}`;
                     const res = await fetch(url, {
-                        headers: { 'Authorization': `token ${config.value.token}`, 'Accept': 'application/vnd.github.v3+json' }
+                        headers: { 
+                            'Authorization': `token ${config.value.token}`, 
+                            'Accept': 'application/vnd.github.v3+json',
+                            'Cache-Control': 'no-cache'
+                        }
                     });
-                    if (!res.ok) throw new Error('API Error');
+                    
+                    if (res.status === 404) {
+                        subs.value = [];
+                        syncStatus.value = 'saved';
+                        return;
+                    }
+
+                    if (!res.ok) throw new Error('Auth Error');
                     const data = await res.json();
                     sha.value = data.sha;
-                    // Base64 解码支持中文
-                    const content = new TextDecoder().decode(Uint8Array.from(atob(data.content), c => c.charCodeAt(0)));
-                    subs.value = JSON.parse(content);
+                    subs.value = JSON.parse(b64ToU8(data.content));
+                    syncStatus.value = 'saved';
                 } catch (e) {
-                    alert('获取数据失败，请检查配置或网络');
                     console.error(e);
+                    syncStatus.value = 'error';
                 } finally {
                     loading.value = false;
                 }
             };
 
             const syncToGithub = async () => {
-                loading.value = true;
+                syncStatus.value = 'syncing';
                 try {
-                    const contentStr = JSON.stringify(subs.value, null, 2);
-                    // Base64 编码支持中文
-                    const contentBase64 = btoa(String.fromCharCode(...new TextEncoder().encode(contentStr)));
+                    const contentJson = JSON.stringify(subs.value, null, 2);
+                    const contentBase64 = u8ToBase64(contentJson);
                     
                     const url = `https://api.github.com/repos/${config.value.owner}/${config.value.repo}/contents/${config.value.path}`;
                     const res = await fetch(url, {
                         method: 'PUT',
                         headers: { 'Authorization': `token ${config.value.token}`, 'Content-Type': 'application/json' },
                         body: JSON.stringify({
-                            message: 'Update subscriptions via Web',
+                            message: `Update via Web ${new Date().toLocaleTimeString()}`,
                             content: contentBase64,
                             sha: sha.value
                         })
                     });
+                    
+                    if(!res.ok) throw new Error('Sync Failed');
                     const data = await res.json();
-                    sha.value = data.content.sha; // 更新 sha 以便下次提交
-                    alert('同步成功！');
+                    sha.value = data.content.sha;
+                    syncStatus.value = 'saved';
+                    setTimeout(() => { if(syncStatus.value === 'saved') syncStatus.value = 'idle'; }, 2000);
                 } catch (e) {
-                    alert('同步失败');
-                } finally {
-                    loading.value = false;
+                    console.error(e);
+                    syncStatus.value = 'error';
                 }
             };
 
-            // UI 辅助函数
-            const statusColor = (s) => s === 'active' ? 'border-green-500' : s === 'paused' ? 'border-yellow-500' : 'border-red-500 opacity-60';
-            const statusText = (s) => ({ active: '进行中', paused: '已暂停', cancelled: '已取消' }[s]);
-            const cycleText = (c) => ({ month: '月', year: '年', week: '周' }[c]);
-            const isUrgent = (sub) => daysUntil(sub) <= 3 && sub.status === 'active';
-
-            // Modal 操作
-            const openSettings = () => document.getElementById('settings_modal').showModal();
+            // Interactions
             const saveConfig = () => {
                 localStorage.setItem('gh_token', config.value.token);
                 localStorage.setItem('gh_owner', config.value.owner);
                 localStorage.setItem('gh_repo', config.value.repo);
                 localStorage.setItem('gh_path', config.value.path);
-                document.getElementById('settings_modal').close();
-                fetchData(); // 自动刷新
+                fetchData();
             };
 
             const openAddModal = () => {
-                form.value = { id: null, name: '', price: '', cycle: 'month', start_date: dayjs().format('YYYY-MM-DD'), status: 'active' };
+                form.value = { id: null, name: '', price: '', currency: 'CNY', cycle: 'month', start_date: dayjs().format('YYYY-MM-DD'), status: 'active' };
                 isEditing.value = false;
                 document.getElementById('sub_modal').showModal();
             };
@@ -274,7 +528,7 @@
             };
 
             const saveSub = async () => {
-                if (!form.value.name) return alert('请输入名称');
+                if (!form.value.name) return;
                 if (isEditing.value) {
                     const index = subs.value.findIndex(s => s.id === form.value.id);
                     subs.value[index] = { ...form.value };
@@ -282,12 +536,13 @@
                     subs.value.push({ ...form.value, id: Date.now().toString() });
                 }
                 document.getElementById('sub_modal').close();
-                await syncToGithub(); // 自动保存
+                await syncToGithub();
             };
 
             const deleteSub = async (id) => {
-                if(confirm('确定删除吗？')) {
+                if(confirm('删除此订阅?')) {
                     subs.value = subs.value.filter(s => s.id !== id);
+                    document.getElementById('sub_modal').close();
                     await syncToGithub();
                 }
             };
@@ -297,9 +552,15 @@
             });
 
             return {
-                subs, loading, config, form, isEditing, sortedSubs, totalMonthly,
-                openSettings, saveConfig, openAddModal, editSub, saveSub, deleteSub, fetchData,
-                calculateNextDate, daysUntil, statusColor, statusText, cycleText, isUrgent
+                subs, loading, syncStatus, statusMessage, statusDotColor,
+                config, form, isEditing, isDark, drawerOpen,
+                sortedSubs, totalMonthly, activeSubsCount, nextBillName, nextBillDays,
+                toggleTheme, saveConfig, openAddModal, editSub, saveSub, deleteSub,
+                calculateNextDate, daysUntil, getProgress, getIconStyle,
+                statusText: (s) => ({ active: '活跃', paused: '暂停', cancelled: '取消' }[s]),
+                cycleText: (c) => ({ month: '每月', year: '每年', week: '每周' }[c]),
+                getCurrencySymbol: (c) => ({ CNY: '¥', USD: '$', HKD: '$', JPY: '¥' }[c] || '¥'),
+                isUrgent: (sub) => daysUntil(sub) <= 3 && sub.status === 'active'
             };
         }
     }).mount('#app');
