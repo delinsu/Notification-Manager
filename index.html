@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Subscription Manager</title>
+    <!-- Vue 3 -->
+    <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        gray: { 50: '#F9FAFB', 100: '#F3F4F6', 200: '#E5E7EB', 300: '#D1D5DB', 400: '#9CA3AF', 500: '#6B7280', 600: '#4B5563', 700: '#374151', 800: '#1F2937', 900: '#111827', 950: '#020617' },
+                        primary: { 500: '#3B82F6', 600: '#2563EB' }
+                    },
+                    fontFamily: {
+                        sans: ['"Inter"', 'system-ui', 'sans-serif'],
+                        mono: ['"JetBrains Mono"', 'monospace']
+                    },
+                    boxShadow: {
+                        'soft': '0 4px 20px -2px rgba(0, 0, 0, 0.05)'
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- DaisyUI -->
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@4.4.19/dist/full.min.css" rel="stylesheet" type="text/css" />
+    <!-- Day.js -->
+    <script src="https://cdn.jsdelivr.net/npm/dayjs@1/dayjs.min.js"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+    
+    <style>
+        body { font-family: 'Inter', sans-serif; -webkit-font-smoothing: antialiased; background-color: #F9FAFB; }
+        .dark body { background-color: #020617; }
+        .font-num { font-family: 'JetBrains Mono', monospace; letter-spacing: -0.5px; }
+        .hide-scroll::-webkit-scrollbar { display: none; }
+        
+        /* 动画 */
+        .list-move, .list-enter-active, .list-leave-active { transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1); }
+        .list-enter-from, .list-leave-to { opacity: 0; transform: scale(0.95) translateY(10px); }
+        .list-leave-active { position: absolute; }
+        
+        .sidebar-enter-active, .sidebar-leave-active { transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
+        .sidebar-enter-from, .sidebar-leave-to { transform: translateX(100%); }
+    </style>
+</head>
+<body class="text-gray-900 dark:text-gray-100 min-h-screen transition-colors duration-300">
+
+<div id="app" class="relative min-h-screen flex flex-col" v-cloak>
+
+    <!-- 1. 顶部导航 -->
+    <nav class="sticky top-0 z-30 w-full bg-white/80 dark:bg-gray-950/80 backdrop-blur-xl border-b border-gray-200/50 dark:border-gray-800/50">
+        <div class="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-9 h-9 rounded-xl bg-gray-900 dark:bg-white text-white dark:text-gray-950 flex items-center justify-center font-black text-lg shadow-lg">S</div>
+                <span class="font-bold text-lg tracking-tight text-gray-800 dark:text-white">SubManager</span>
+            </div>
+            <div class="flex items-center gap-2">
+                <!-- 状态点 -->
+                <div class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-gray-100 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 transition-all duration-300 mr-1">
+                    <div v-if="syncStatus === 'syncing'" class="loading loading-spinner loading-xs text-blue-500"></div>
+                    <div v-else class="w-2 h-2 rounded-full transition-colors duration-300 shadow-[0_0_8px]" :class="statusDotColor"></div>
+                    <span class="text-xs font-semibold text-gray-500 dark:text-gray-400">{{ statusMessage }}</span>
+                </div>
+                <!-- 按钮 -->
+                <button @click="toggleTheme" class="btn btn-circle btn-sm btn-ghost text-gray-500">
+                    <svg v-if="!isDark" xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 20 20" fill="currentColor"><path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"></path></svg>
+                    <svg v-else xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z" clip-rule="evenodd"></path></svg>
+                </button>
+                <button @click="settingsOpen = true" class="btn btn-circle btn-sm btn-ghost text-gray-500">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 2. 主内容 -->
+    <main class="flex-grow w-full max-w-6xl mx-auto px-4 sm:px-6 py-8">
+        
+        <!-- 引导页 -->
+        <div v-if="!config.token" class="flex flex-col items-center justify-center py-20 text-center">
+            <div class="w-24 h-24 bg-gray-100 dark:bg-gray-800 rounded-3xl flex items-center justify-center mb-6 shadow-soft text-4xl">👋</div>
+            <h2 class="text-3xl font-extrabold mb-3 text-gray-900 dark:text-white tracking-tight">开始管理订阅</h2>
+            <p class="text-gray-500 mb-8 max-w-md">配置 GitHub Token 以启用数据同步。</p>
+            <button @click="settingsOpen = true" class="btn btn-neutral px-8 rounded-full shadow-lg hover:scale-105 transition-transform">配置 Token</button>
+        </div>
+
+        <div v-else>
+            <!-- Bento Grid 概览 -->
+            <div class="grid grid-cols-2 md:grid-cols-12 gap-4 mb-10">
+                <!-- 支出 -->
+                <div class="col-span-2 md:col-span-4 bg-white dark:bg-gray-900 p-6 rounded-[28px] shadow-sm ring-1 ring-gray-100 dark:ring-gray-800 relative overflow-hidden group">
+                    <div class="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-1">月固定支出</div>
+                    <div class="flex items-baseline gap-1">
+                        <span class="text-xl font-bold text-gray-500">¥</span>
+                        <span class="text-4xl font-black text-gray-900 dark:text-white tracking-tighter font-num">{{ totalMonthly }}</span>
+                    </div>
+                    <div class="mt-4 text-sm text-gray-400 font-medium bg-gray-50 dark:bg-gray-800 inline-block px-3 py-1 rounded-full">
+                        年预计 ¥{{ (totalMonthly * 12).toLocaleString() }}
+                    </div>
+                </div>
+
+                <!-- 活跃数 -->
+                <div class="col-span-1 md:col-span-3 bg-white dark:bg-gray-900 p-6 rounded-[28px] shadow-sm ring-1 ring-gray-100 dark:ring-gray-800 flex flex-col justify-center items-center text-center">
+                    <div class="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-2">活跃订阅</div>
+                    <div class="text-4xl font-black text-gray-900 dark:text-white font-num">{{ activeSubsCount }}</div>
+                </div>
+
+                <!-- 下次扣费 (高亮) -->
+                <div class="col-span-1 md:col-span-5 bg-gray-900 dark:bg-blue-600 p-6 rounded-[28px] shadow-lg text-white flex flex-col justify-between relative overflow-hidden">
+                    <div class="absolute -right-6 -top-6 w-32 h-32 bg-white/10 rounded-full blur-2xl"></div>
+                    <div>
+                        <div class="text-xs font-bold text-white/60 uppercase tracking-wider mb-1">最近扣费</div>
+                        <div class="text-2xl font-bold tracking-tight truncate pr-4">{{ nextBillName }}</div>
+                    </div>
+                    <div class="flex justify-between items-end mt-4">
+                        <div class="text-sm text-white/70">{{ nextBillDateText }}</div>
+                        <div class="text-right">
+                            <span class="text-4xl font-black font-num leading-none">{{ nextBillDays }}</span>
+                            <span class="text-xs font-bold uppercase ml-1 opacity-60">天后</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 筛选条 -->
+            <div class="flex items-center gap-2 mb-6 overflow-x-auto hide-scroll py-1">
+                <button v-for="t in ['all', 'active', 'paused']" :key="t" @click="filter = t" 
+                    class="px-5 py-2 rounded-full text-sm font-semibold transition-all duration-200 border"
+                    :class="filter === t ? 'bg-gray-900 text-white border-gray-900 dark:bg-white dark:text-gray-900' : 'bg-white text-gray-500 border-transparent hover:bg-gray-100 dark:bg-gray-900 dark:text-gray-400 dark:hover:bg-gray-800'">
+                    {{ t === 'all' ? '全部' : (t === 'active' ? '生效中' : '已暂停') }}
+                </button>
+            </div>
+
+            <!-- 列表 -->
+            <transition-group name="list" tag="div" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 pb-32">
+                <div v-for="sub in filteredSubs" :key="sub.id" @click="editSub(sub)"
+                     class="group relative bg-white dark:bg-gray-900 rounded-[24px] p-6 shadow-sm ring-1 ring-gray-100 dark:ring-gray-800 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-pointer overflow-hidden">
+                    
+                    <div class="flex justify-between items-start mb-6">
+                        <div class="flex items-center gap-4">
+                            <!-- Tint Color Icon -->
+                            <div class="w-12 h-12 rounded-2xl flex items-center justify-center text-lg font-bold transition-transform group-hover:scale-110 duration-300" :class="getColorClass(sub.name)">
+                                {{ sub.name.charAt(0).toUpperCase() }}
+                            </div>
+                            <div class="flex flex-col">
+                                <h3 class="font-bold text-gray-900 dark:text-white text-lg leading-tight">{{ sub.name }}</h3>
+                                <div class="flex items-center gap-1.5 mt-1">
+                                    <span v-if="sub.status !== 'active'" class="w-1.5 h-1.5 rounded-full" :class="sub.status === 'paused' ? 'bg-yellow-400' : 'bg-red-400'"></span>
+                                    <span class="text-xs font-medium text-gray-400">{{ cycleText(sub.cycle) }}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex items-end justify-between relative z-10">
+                        <div class="flex items-start gap-1">
+                            <span class="text-xs font-bold text-gray-400 mt-1.5">{{ getSymbol(sub.currency) }}</span>
+                            <span class="text-3xl font-bold text-gray-900 dark:text-white font-num tracking-tight" :class="{'opacity-40': sub.status !== 'active'}">{{ sub.price }}</span>
+                        </div>
+                        <div v-if="sub.status === 'active'" class="text-right">
+                            <div class="text-sm font-bold font-num" :class="isUrgent(sub) ? 'text-red-500' : 'text-gray-900 dark:text-gray-100'">{{ calculateNextDate(sub) }}</div>
+                            <div class="text-[10px] font-bold text-gray-400 uppercase tracking-wide mt-0.5">下次扣费</div>
+                        </div>
+                    </div>
+
+                    <div v-if="sub.status === 'active'" class="absolute bottom-0 left-0 right-0 h-[3px] bg-gray-50 dark:bg-gray-800">
+                        <div class="h-full transition-all duration-500" :class="isUrgent(sub) ? 'bg-red-500' : 'bg-blue-500'" :style="{ width: getProgress(sub) + '%' }"></div>
+                    </div>
+                </div>
+            </transition-group>
+
+             <div v-if="!loading && subs.length === 0" class="flex flex-col items-center justify-center py-20 text-gray-400">
+                <div class="text-4xl mb-2 grayscale opacity-50">📫</div>
+                <p>暂无数据</p>
+            </div>
+        </div>
+    </main>
+
+    <!-- FAB -->
+    <button @click="openAddModal" class="fixed bottom-10 right-8 md:right-12 w-16 h-16 bg-gray-900 dark:bg-blue-600 text-white rounded-full shadow-2xl flex items-center justify-center hover:scale-110 active:scale-95 transition-all z-20 group">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 transition-transform group-hover:rotate-90" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
+    </button>
+
+    <!-- 设置 -->
+    <div v-if="settingsOpen" class="fixed inset-0 bg-black/20 backdrop-blur-sm z-40 transition-opacity" @click="settingsOpen = false"></div>
+    <!-- 侧边栏 -->
+    <transition name="fade">
+        <div v-if="settingsOpen" class="fixed inset-0 bg-black/30 z-40 backdrop-blur-none" @click="settingsOpen = false"></div>
+    </transition>
+    <transition name="sidebar">
+        <div v-if="settingsOpen" class="fixed inset-y-0 right-0 w-80 bg-white dark:bg-gray-900 shadow-2xl z-50 p-6 flex flex-col border-l border-gray-200 dark:border-gray-800">
+            <div class="flex justify-between items-center mb-6 pb-4 border-b border-gray-100 dark:border-gray-800">
+                <h2 class="text-lg font-bold">设置</h2>
+                <button @click="settingsOpen = false" class="btn btn-circle btn-xs btn-ghost">✕</button>
+            </div>
+            
+            <div class="space-y-5 flex-grow overflow-y-auto no-scrollbar">
+                <div>
+                    <label class="label-text text-xs font-bold text-gray-500 mb-1 block">GitHub Token</label>
+                    <input v-model.lazy="config.token" @change="saveConfig" type="password" class="input input-bordered input-sm w-full rounded-lg" placeholder="ghp_..." />
+                </div>
+                <div>
+                    <label class="label-text text-xs font-bold text-gray-500 mb-1 block">用户名 (Owner)</label>
+                    <input v-model.lazy="config.owner" @change="saveConfig" type="text" class="input input-bordered input-sm w-full rounded-lg" />
+                </div>
+                <div>
+                    <label class="label-text text-xs font-bold text-gray-500 mb-1 block">仓库名 (Repo)</label>
+                    <input v-model.lazy="config.repo" @change="saveConfig" type="text" class="input input-bordered input-sm w-full rounded-lg" />
+                </div>
+                <div>
+                    <label class="label-text text-xs font-bold text-gray-500 mb-1 block">文件路径</label>
+                    <input v-model.lazy="config.path" @change="saveConfig" type="text" class="input input-bordered input-sm w-full rounded-lg" placeholder="subscriptions.json" />
+                </div>
+            </div>
+
+            <div class="mt-4 pt-4 border-t border-gray-100 dark:border-gray-800 text-center">
+                <p class="text-xs text-gray-400">Pure Mode v3.2</p>
+            </div>
+        </div>
+    </transition>
+
+    <!-- Modal -->
+    <dialog id="sub_modal" class="modal modal-bottom sm:modal-middle">
+        <div class="modal-box bg-white dark:bg-gray-900 rounded-2xl p-6">
+            <h3 class="font-bold text-lg mb-4">{{ isEditing ? '编辑' : '新建' }}</h3>
+            <div class="space-y-4">
+                <input v-model="form.name" type="text" placeholder="服务名称" class="input input-bordered w-full" />
+                <div class="grid grid-cols-2 gap-3">
+                    <input v-model.number="form.price" type="number" step="0.01" placeholder="金额" class="input input-bordered w-full" />
+                    <select v-model="form.currency" class="select select-bordered w-full">
+                        <option value="CNY">CNY (¥)</option>
+                        <option value="USD">USD ($)</option>
+                        <option value="HKD">HKD ($)</option>
+                        <option value="JPY">JPY (¥)</option>
+                    </select>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <select v-model="form.cycle" class="select select-bordered w-full">
+                        <option value="month">每月</option>
+                        <option value="year">每年</option>
+                        <option value="week">每周</option>
+                    </select>
+                    <select v-model="form.status" class="select select-bordered w-full">
+                        <option value="active">🔵 启用</option>
+                        <option value="paused">🔘 暂停</option>
+                        <option value="cancelled">🔴 取消</option>
+                    </select>
+                </div>
+                <input v-model="form.start_date" type="date" class="input input-bordered w-full" />
+            </div>
+            <div class="modal-action flex justify-between items-center mt-6">
+                 <button v-if="isEditing" @click="deleteSub(form.id)" class="btn btn-ghost btn-sm text-error">删除</button>
+                 <div v-else></div>
+                 <div class="flex gap-2">
+                     <form method="dialog"><button class="btn btn-ghost btn-sm">取消</button></form>
+                     <button @click="saveSub" class="btn btn-neutral btn-sm px-6">保存</button>
+                 </div>
+            </div>
+        </div>
+        <form method="dialog" class="modal-backdrop bg-black/30"><button>close</button></form>
+    </dialog>
+
+</div>
+
+<script>
+    const { createApp, ref, computed, onMounted, watch } = Vue;
+
+    createApp({
+        setup() {
+            // --- State ---
+            const subs = ref([]);
+            const filter = ref('all');
+            const loading = ref(false);
+            const syncStatus = ref('idle'); 
+            const sha = ref('');
+            const isEditing = ref(false);
+            const settingsOpen = ref(false);
+            const isDark = ref(localStorage.getItem('theme') === 'dark');
+            
+            const config = ref({
+                token: localStorage.getItem('gh_token') || '',
+                owner: localStorage.getItem('gh_owner') || '',
+                repo: localStorage.getItem('gh_repo') || '',
+                path: localStorage.getItem('gh_path') || 'subscriptions.json'
+            });
+
+            const form = ref({ id: null, name: '', price: '', currency: 'CNY', cycle: 'month', start_date: '', status: 'active' });
+
+            // --- Logic ---
+            const toggleTheme = () => isDark.value = !isDark.value;
+            watch(isDark, (val) => {
+                document.documentElement.classList.toggle('dark', val);
+                localStorage.setItem('theme', val ? 'dark' : 'light');
+            }, { immediate: true });
+
+            const getSymbol = (code) => ({ 'CNY': '¥', 'USD': '$', 'HKD': 'HK$', 'JPY': 'JP¥', 'EUR': '€' }[code] || code);
+            
+            const getColorClass = (name) => {
+                const colors = [
+                    'bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-400',
+                    'bg-orange-50 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400',
+                    'bg-amber-50 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400',
+                    'bg-green-50 text-green-600 dark:bg-green-900/30 dark:text-green-400',
+                    'bg-teal-50 text-teal-600 dark:bg-teal-900/30 dark:text-teal-400',
+                    'bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400',
+                    'bg-indigo-50 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400',
+                    'bg-violet-50 text-violet-600 dark:bg-violet-900/30 dark:text-violet-400',
+                    'bg-purple-50 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400',
+                    'bg-pink-50 text-pink-600 dark:bg-pink-900/30 dark:text-pink-400',
+                ];
+                let hash = 0;
+                for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
+                return colors[Math.abs(hash) % colors.length];
+            };
+
+            const statusMessage = computed(() => {
+                if(syncStatus.value === 'syncing') return '同步中';
+                if(syncStatus.value === 'saved') return '已同步';
+                if(syncStatus.value === 'error') return '出错';
+                return '就绪';
+            });
+            const statusDotColor = computed(() => ({ saved: 'bg-green-500 shadow-green-500/50', error: 'bg-red-500 shadow-red-500/50', idle: 'bg-gray-300 dark:bg-gray-600 shadow-none' }[syncStatus.value] || 'bg-gray-300'));
+
+            // Calculations
+            const calculateNextDate = (sub) => {
+                if (sub.status !== 'active') return '-';
+                const today = dayjs().startOf('day');
+                let nextDate = dayjs(sub.start_date);
+                if (nextDate.isBefore(today.subtract(1, 'year')) && sub.cycle === 'month') nextDate = nextDate.add(today.diff(nextDate, 'year'), 'year');
+                while (nextDate.isBefore(today)) {
+                    if (sub.cycle === 'month') nextDate = nextDate.add(1, 'month');
+                    else if (sub.cycle === 'year') nextDate = nextDate.add(1, 'year');
+                    else if (sub.cycle === 'week') nextDate = nextDate.add(1, 'week');
+                }
+                return nextDate.format('YYYY-MM-DD');
+            };
+
+            const daysUntil = (sub) => {
+                if (sub.status !== 'active') return 999;
+                return dayjs(calculateNextDate(sub)).diff(dayjs().startOf('day'), 'day');
+            };
+
+            const getProgress = (sub) => {
+                 if (sub.status !== 'active') return 0;
+                 const total = sub.cycle === 'year' ? 365 : sub.cycle === 'week' ? 7 : 30;
+                 return Math.max(0, Math.min(100, 100 - ((daysUntil(sub) / total) * 100)));
+            };
+
+            const sortedSubs = computed(() => [...subs.value].sort((a, b) => {
+                if (a.status !== b.status) return a.status === 'active' ? -1 : 1;
+                return daysUntil(a) - daysUntil(b);
+            }));
+
+            const filteredSubs = computed(() => {
+                if (filter.value === 'all') return sortedSubs.value;
+                return sortedSubs.value.filter(s => s.status === filter.value);
+            });
+
+            // --- 之前漏掉的变量在这里 ---
+            const activeSubsCount = computed(() => subs.value.filter(s => s.status === 'active').length);
+
+            const totalMonthly = computed(() => subs.value.reduce((t, s) => {
+                if (s.status !== 'active') return t;
+                let p = parseFloat(s.price);
+                if (s.currency === 'USD') p *= 7.2;
+                else if (s.currency === 'HKD') p *= 0.92;
+                else if (s.currency === 'JPY') p *= 0.05;
+                else if (s.currency === 'EUR') p *= 7.8;
+                if (s.cycle === 'month') return t + p;
+                if (s.cycle === 'year') return t + (p / 12);
+                if (s.cycle === 'week') return t + (p * 4.3);
+                return t;
+            }, 0).toFixed(0));
+
+            const nextBillSub = computed(() => sortedSubs.value.find(s => s.status === 'active'));
+            const nextBillName = computed(() => nextBillSub.value ? nextBillSub.value.name : '无订阅');
+            const nextBillDays = computed(() => nextBillSub.value ? daysUntil(nextBillSub.value) : 0);
+            const nextBillDateText = computed(() => nextBillSub.value ? calculateNextDate(nextBillSub.value) : '-');
+
+            // --- API ---
+            const u8ToBase64 = (str) => btoa(String.fromCharCode(...new TextEncoder().encode(str)));
+            const b64ToU8 = (str) => new TextDecoder().decode(Uint8Array.from(atob(str), c => c.charCodeAt(0)));
+
+            const fetchData = async () => {
+                if (!config.value.token) return;
+                loading.value = true;
+                syncStatus.value = 'syncing';
+                try {
+                    const url = `https://api.github.com/repos/${config.value.owner}/${config.value.repo}/contents/${config.value.path}`;
+                    const res = await fetch(url, {
+                        cache: 'no-store',
+                        headers: { 'Authorization': `token ${config.value.token}`, 'Accept': 'application/vnd.github.v3+json' }
+                    });
+                    if (res.status === 404) { subs.value = []; syncStatus.value = 'saved'; return; }
+                    if (!res.ok) throw new Error('API Error');
+                    const data = await res.json();
+                    sha.value = data.sha;
+                    subs.value = JSON.parse(b64ToU8(data.content));
+                    syncStatus.value = 'saved';
+                } catch (e) { console.error(e); syncStatus.value = 'error'; } finally { loading.value = false; }
+            };
+
+            const syncToGithub = async () => {
+                syncStatus.value = 'syncing';
+                try {
+                    const contentJson = JSON.stringify(subs.value, null, 2);
+                    const url = `https://api.github.com/repos/${config.value.owner}/${config.value.repo}/contents/${config.value.path}`;
+                    const res = await fetch(url, {
+                        method: 'PUT',
+                        headers: { 'Authorization': `token ${config.value.token}`, 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ message: `Update`, content: u8ToBase64(contentJson), sha: sha.value })
+                    });
+                    if(!res.ok) throw new Error('Sync Failed');
+                    const data = await res.json();
+                    sha.value = data.content.sha;
+                    syncStatus.value = 'saved';
+                    setTimeout(() => { if(syncStatus.value === 'saved') syncStatus.value = 'idle'; }, 2000);
+                } catch (e) { console.error(e); syncStatus.value = 'error'; }
+            };
+
+            const saveConfig = () => {
+                ['token', 'owner', 'repo', 'path'].forEach(k => localStorage.setItem('gh_'+k, config.value[k]));
+                fetchData();
+            };
+
+            const openAddModal = () => {
+                form.value = { id: null, name: '', price: '', currency: 'CNY', cycle: 'month', start_date: dayjs().format('YYYY-MM-DD'), status: 'active' };
+                isEditing.value = false;
+                document.getElementById('sub_modal').showModal();
+            };
+            const editSub = (sub) => { form.value = { ...sub }; isEditing.value = true; document.getElementById('sub_modal').showModal(); };
+            const saveSub = async () => {
+                if (!form.value.name) return;
+                if (isEditing.value) subs.value[subs.value.findIndex(s => s.id === form.value.id)] = { ...form.value };
+                else subs.value.push({ ...form.value, id: Date.now().toString() });
+                document.getElementById('sub_modal').close();
+                await syncToGithub();
+            };
+            const deleteSub = async (id) => {
+                if(confirm('Confirm delete?')) {
+                    subs.value = subs.value.filter(s => s.id !== id);
+                    document.getElementById('sub_modal').close();
+                    await syncToGithub();
+                }
+            };
+
+            onMounted(() => { if (config.value.token) fetchData(); });
+
+            return {
+                subs, filteredSubs, filter, loading, syncStatus, statusMessage, statusDotColor,
+                config, form, isEditing, isDark, settingsOpen,
+                totalMonthly, nextBillName, nextBillDays, nextBillDateText, activeSubsCount,
+                toggleTheme, saveConfig, openAddModal, editSub, saveSub, deleteSub,
+                calculateNextDate, getProgress, getSymbol, getColorClass,
+                statusText: (s) => ({ active: 'Active', paused: 'Paused', cancelled: 'Cancelled' }[s]),
+                cycleText: (c) => ({ month: '每月', year: '每年', week: '每周' }[c]),
+                isUrgent: (sub) => daysUntil(sub) <= 3 && sub.status === 'active'
+            };
+        }
+    }).mount('#app');
+</script>
+</body>
+</html>

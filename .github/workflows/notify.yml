@@ -1,0 +1,28 @@
+name: Check Subscriptions
+
+on:
+  schedule:
+    # 北京时间 09:00 = UTC 01:00
+    # 北京时间 21:00 = UTC 13:00
+    - cron: '0 1,13 * * *'
+  workflow_dispatch: # 允许手动点击按钮触发测试
+
+permissions:
+  contents: read
+  
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      - name: Run Check Script
+        env:
+          BARK_KEY: ${{ secrets.BARK_KEY }} # 需要在仓库 Settings -> Secrets 中配置
+        run: node scripts/check-subs.js
