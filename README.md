@@ -16,7 +16,7 @@
 Notification Manager 抛弃了臃肿的数据库和服务器，回归极简。
 
 *   🎨 **Bento Grid UI**：采用网格布局，信息层级分明，视觉精美。
-*   🔒 **隐私优先**：没有第三方服务器。所有数据直接通过 API 存入你自己的 GitHub 私有仓库 (`subscriptions.json`)。
+*   🔒 **隐私优先**：没有第三方服务器。所有数据直接通过 API 存入你自己的 GitHub 私有仓库 (`data.json`)。
 *   ⚡ **零配置部署**：只有一个 `.html` 文件。无需 `npm install`，无需构建，双击即用，或托管在 GitHub Pages。
 *   🌗 **深色模式**：自动适配系统，并在应用内丝滑切换日间/夜间模式。
 *   💰 **多币种支持**：支持 CNY, USD, HKD, JPY 等，自动估算月度/年度总支出。
@@ -43,7 +43,7 @@ Notification Manager 抛弃了臃肿的数据库和服务器，回归极简。
 由于数据存储在你的仓库中，你需要创建一个访问令牌（Token）：
 1.  登录 GitHub，进入 [Settings > Developer settings > Personal access tokens](https://github.com/settings/tokens)。
 2.  点击 **Generate new token (Classic)**。
-3.  **Note** 填写 `SubManager`。
+3.  **Note** 任意填写。
 4.  **Scopes** (权限) 勾选 `repo` (这允许读写你的私有仓库)。
 5.  点击生成并**复制 Token** (以 `ghp_` 开头)。
 
@@ -59,7 +59,7 @@ Notification Manager 抛弃了臃肿的数据库和服务器，回归极简。
     *   **Token**: `ghp_xxxx...`
     *   **Owner**: `你的用户名`
     *   **Repo**: `你的仓库名`
-    *   **Path**: `subscriptions.json` (默认即可)
+    *   **Path**: `data.json` (默认即可)
 5.  保存！现在你可以点击右下角的 `+` 添加订阅了。
 
 ---
@@ -78,13 +78,16 @@ Notification Manager 抛弃了臃肿的数据库和服务器，回归极简。
 ## ❓ 常见问题 (FAQ)
 
 **Q: 数据存在哪里？安全吗？**
-A: 数据存储在你配置的 GitHub 仓库中的 `subscriptions.json` 文件里。如果你将仓库设为 **Private (私有)**，那么除了你之外没人能看到。本应用纯前端运行，Token 仅保存在你浏览器的 LocalStorage 中，不会发送给任何第三方服务器。
+A: 数据存储在你配置的 GitHub 仓库中的 `data.json` 文件里。如果你将仓库设为 **Private (私有)**，那么除了你之外没人能看到。本应用纯前端运行，Token 仅保存在你浏览器的 LocalStorage 中，不会发送给任何第三方服务器。
 
 **Q: 为什么打开是白屏？**
 A: 请检查浏览器控制台 (F12)。通常是因为网络无法连接到 GitHub API（国内网络环境可能需要科学上网），或者 Token 配置错误。
 
 **Q: 如何备份数据？**
-A: 你的数据就在 GitHub 上！你随时可以去你的仓库查看、下载或回滚 `subscriptions.json` 的历史版本。
+A: 你的数据就在 GitHub 上！你随时可以去你的仓库查看、下载或回滚 `data.json` 的历史版本。
+
+**Q: 状态显示出错？**
+A: 可能是更新后缓存问题。打开浏览器控制台 (F12)，输入 `localStorage.clear();` 后回车。
 
 ---
 
@@ -92,7 +95,7 @@ A: 你的数据就在 GitHub 上！你随时可以去你的仓库查看、下载
 计划在未来版本中加入更多功能，同时保持“单文件、零依赖”的极简特性。
 ### 📊 数据可视化
 - [ ] **支出图表**: 引入图表库，展示“支出类别占比”饼图和“年度支出趋势”柱状图。
-- [ ] **日历视图**: 在月历上直观展示每一笔扣费的具体日期。
+- [ ] **日历视图**: 在日历上直观展示每一笔扣费的具体日期。
 ### ⚡ 增强功能
 - [ ] **日历订阅 (.ics)**: 一键导出 `.ics` 文件，将扣费日同步到 Google Calendar 或 Apple Calendar。
 - [ ] **多汇率管理**: 支持手动设置汇率或通过免费 API 实时获取最新汇率。

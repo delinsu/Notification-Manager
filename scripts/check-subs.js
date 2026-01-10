@@ -4,7 +4,7 @@ const https = require('https');
 
 // --- 配置区域 ---
 // 确保这个路径相对于脚本执行的位置是正确的 (通常在项目根目录执行 node scripts/check-subs.js)
-const DATA_FILE = 'subscriptions.json'; 
+const DATA_FILE = 'data.json'; 
 const BARK_SERVER = process.env.BARK_SERVER;
 // 将你的 GitHub Pages 网址填在这里，点击通知可以直接跳转管理
 const DASHBOARD_URL = 'https://delinsu.github.io/notification-manager/'; 
@@ -134,7 +134,7 @@ async function main() {
             const rawData = fs.readFileSync(dataPath, 'utf8');
             subscriptions = JSON.parse(rawData);
         } else {
-            console.log("No subscriptions.json found, skipping.");
+            console.log("No data.json found, skipping.");
             return;
         }
     } catch (e) {
