@@ -25,4 +25,5 @@ jobs:
       - name: Run Check Script
         env:
           BARK_KEY: ${{ secrets.BARK_KEY }} # 需要在仓库 Settings -> Secrets 中配置
+          BARK_SERVER: ${{ secrets.BARK_SERVER }}
         run: node scripts/check-subs.js
